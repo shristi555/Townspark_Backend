@@ -25,7 +25,20 @@ SECRET_KEY = 'django-insecure-po73ofmw374w#t(k!$7i#d$0b6ekpcr)s-s#len64dqf&^g7^4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']   
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+    },
+}
+
 
 
 # Application definition
@@ -37,7 +50,54 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Third-party apps
+    "rest_framework",
+    "rest_framework.authtoken",
+    "djoser",
+    "rest_framework_simplejwt",
+    "django_extensions",
+    
+    # Local apps
+    "accounts",
 ]
+
+
+AUTH_USER_MODEL = "accounts.User"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "DEFAULT_PARSER_CLASSES": (
+        "rest_framework.parsers.JSONParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.MultiPartParser",
+    ),
+}
+
+
+SIMPLE_JWT = {
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+
+DJOSER = {
+    "USER_ID_FIELD": "id",
+    "LOGIN_FIELD": "email",
+    "USER_CREATE_PASSWORD_RETYPE": False,
+    "SEND_ACTIVATION_EMAIL": False,  # Set to True if email backend is configured
+    "SEND_CONFIRMATION_EMAIL": False,
+    "SERIALIZERS": {
+        "user_create": "accounts.serializers.UserCreateSerializer",
+        "user": "accounts.serializers.UserSerializer",
+        "current_user": "accounts.serializers.UserSerializer",
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
