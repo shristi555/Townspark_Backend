@@ -11,4 +11,11 @@ dependencies = [
     "djangorestframework>=3.16.1",
     "djangorestframework-simplejwt>=5.5.1",
     "djoser>=2.3.3",
+    "drf-nested-routers>=0.94.1",
+    "pillow>=11.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "requests>=2.32.5",
 ]
