@@ -1,55 +1,64 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, ResolverProfile, UserBadge
+from django.contrib.auth import get_user_model
 
-
-class ResolverProfileInline(admin.StackedInline):
-    model = ResolverProfile
-    fk_name = 'user'  # Specify the foreign key to use
-    can_delete = False
-    verbose_name_plural = 'Resolver Profile'
+User = get_user_model()
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ['email', 'full_name', 'role', 'is_active', 'is_staff', 'created_at']
-    list_filter = ['role', 'is_active', 'is_staff', 'created_at']
-    search_fields = ['email', 'full_name']
-    ordering = ['-created_at']
-    
+    """Admin configuration for the custom User model."""
+
+    list_display = (
+        "email",
+        "full_name",
+        "is_active",
+        "is_staff",
+        "is_admin",
+        "date_joined",
+    )
+    list_filter = ("is_active", "is_staff", "is_admin", "date_joined")
+    search_fields = ("email", "full_name", "phone_number")
+    ordering = ("-date_joined",)
+
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal Info', {'fields': ('full_name', 'phone_number', 'address', 'ward', 'bio', 'location', 'profile_image')}),
-        ('Role', {'fields': ('role',)}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Important dates', {'fields': ('last_login',)}),
+        (None, {"fields": ("email", "password")}),
+        (
+            "Personal Info",
+            {"fields": ("full_name", "phone_number", "address", "profile_image")},
+        ),
+        (
+            "Permissions",
+            {
+                "fields": (
+                    "is_active",
+                    "is_staff",
+                    "is_admin",
+                    "is_superuser",
+                    "groups",
+                    "user_permissions",
+                )
+            },
+        ),
+        ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
-    
+
     add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'full_name', 'password1', 'password2', 'role'),
-        }),
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "email",
+                    "password1",
+                    "password2",
+                    "full_name",
+                    "is_active",
+                    "is_staff",
+                    "is_admin",
+                ),
+            },
+        ),
     )
-    
-    inlines = [ResolverProfileInline]
 
-    def get_inlines(self, request, obj=None):
-        if obj and obj.role == 'resolver':
-            return [ResolverProfileInline]
-        return []
-
-
-@admin.register(ResolverProfile)
-class ResolverProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'department', 'designation', 'employee_id', 'is_verified']
-    list_filter = ['is_verified', 'department']
-    search_fields = ['user__email', 'user__full_name', 'employee_id']
-    raw_id_fields = ['user', 'verified_by']
-
-
-@admin.register(UserBadge)
-class UserBadgeAdmin(admin.ModelAdmin):
-    list_display = ['user', 'badge', 'earned_at']
-    list_filter = ['badge', 'earned_at']
-    raw_id_fields = ['user']
+    readonly_fields = ("date_joined", "last_login")

@@ -63,9 +63,8 @@ INSTALLED_APPS = [
     
     # Local apps
     "accounts",
-    "core",
-    "issues",
-    "notifications",
+
+
 ]
 
 

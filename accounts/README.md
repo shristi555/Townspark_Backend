@@ -1,657 +1,513 @@
-## Accounts App
+# Accounts App
 
-This is the Accounts app, which handles user authentication, registration, and profile management for the project. It includes features such as login, logout, password reset, and user profile editing.
+The Accounts app is the central module for user management and authentication in the Townspark Backend. It handles user registration, login, token management, and profile operations.
 
-It uses djoser for token-based authentication and provides endpoints for user-related operations.
+## Overview
 
-### Features
+This app provides a complete authentication system with three user levels:
 
-- Consistent response mechanism using a custom response utility
-- User registration and authentication using djoser
-- Token-based authentication with JWT
-- Custom user model with profile image support
-- Email-based authentication (no username required)
+| User Level       | Description       | Permissions                                   |
+| ---------------- | ----------------- | --------------------------------------------- |
+| **Admin**        | Top-level user    | Can manage all users and has full permissions |
+| **Staff**        | Mid-level user    | Can manage issues and progress                |
+| **Regular User** | Bottom-level user | Can create issues and view their progress     |
+
+## User Model
+
+The custom User model uses email as the unique identifier instead of username.
+
+### Fields
+
+| Field           | Type          | Required | Description                               |
+| --------------- | ------------- | -------- | ----------------------------------------- |
+| `id`            | AutoField     | Auto     | Primary key                               |
+| `email`         | EmailField    | Yes      | Unique email address (used for login)     |
+| `password`      | CharField     | Yes      | Hashed password                           |
+| `full_name`     | CharField     | No       | User's full name                          |
+| `phone_number`  | CharField     | No       | Phone number (7-13 digits, can include +) |
+| `address`       | TextField     | No       | User's address                            |
+| `profile_image` | ImageField    | No       | Profile picture                           |
+| `is_active`     | BooleanField  | No       | Account status (default: True)            |
+| `is_staff`      | BooleanField  | No       | Staff member status (default: False)      |
+| `is_admin`      | BooleanField  | No       | Admin status (default: False)             |
+| `date_joined`   | DateTimeField | Auto     | Account creation timestamp                |
+
+### Public Fields
+
+Only the following fields are exposed in public profile lookups:
+
+- `full_name`
+- `address`
+- `profile_image`
 
 ---
 
 ## API Endpoints
-the following are the main API endpoints provided by the Accounts app, along with their expected request and response formats.
 
-1. `POST /auth/users/` - User Registration
-2. `POST /auth/login/` - User Login (Token Creation)
-3. `POST /auth/jwt/refresh/` - Token Refresh
-4. `POST /auth/jwt/verify/` - Token Verification
-5. `GET /auth/users/me/` - Get Current User Profile
-6. `PUT /auth/users/me/` or `PATCH /auth/users/me/` - Update Current User Profile
-
----
+Base URL: `/api/v1/`
 
 ### 1. User Registration
 
-**Endpoint:** `POST /auth/users/`
+**Endpoint:** `POST /api/v1/auth/signup/`
 
-**Description:** Creates a new user account with email-based authentication.
+Creates a new user account.
 
-**Expected Request Data:**
+#### Request
+
+```http
+POST /api/v1/auth/signup/
+Content-Type: application/json
+```
 
 ```json
 {
-  "email": "bruce.wyane@example.com",
-  "password": "123@J456789",
-  "full_name": "Bruce Wayne",
-  "phone_number": "+9700123456",
-  "address": "Wayne Manor, Gotham City",
+	"email": "bruce.wayne@example.com",
+	"password": "secretpassword123",
+	"full_name": "Bruce Wayne",
+	"phone_number": "+9700123456",
+	"address": "Wayne Manor, Gotham City"
 }
 ```
 
-**Expected Outcome (Success - 201):**
+| Field           | Type   | Required | Description                         |
+| --------------- | ------ | -------- | ----------------------------------- |
+| `email`         | string | Yes      | Valid email address                 |
+| `password`      | string | Yes      | Minimum 8 characters                |
+| `full_name`     | string | No       | User's full name                    |
+| `phone_number`  | string | No       | Phone number (7-13 digits)          |
+| `address`       | string | No       | User's address                      |
+| `profile_image` | file   | No       | Profile image (multipart/form-data) |
+
+#### Response
+
+**Success (201 Created):**
 
 ```json
 {
-	"success": true,
-	"response": {
-            "id": 9,
-            "email": "bruce.wyane@example.com",
-            "full_name": "Bruce Wayne",
-            "phone_number": "+9700",
-            "address": "Wayne Manor, Gotham City",
-            "profile_image": null
-        }
+	"id": 9,
+	"email": "bruce.wayne@example.com",
+	"full_name": "Bruce Wayne",
+	"phone_number": "+9700123456",
+	"address": "Wayne Manor, Gotham City",
+	"profile_image": null
 }
 ```
 
-**Expected Outcome (Error - 400):**
+**Error (400 Bad Request):**
 
 ```json
 {
-    "success": false,
-    "response": null,
-    "error": {
-        "message": "An error occurred",
-        "details": {
-            "email": [
-                "user with this email already exists."
-            ],
-            "phone_number": [
-                "Phone number must be between 7-13 digits",
-                "Phone number can only contain digits or a plus sign.",
-                "Phone number must not contain consecutive special characters."
-            ]
-        }
-    }
+	"email": ["user with this email already exists."],
+	"password": ["This field is required."]
 }
 ```
-
-**Developer Tips:**
-
-- Use `multipart/form-data` content type when uploading profile images
-- Password is write-only and won't be returned in responses
-- Email must be unique across all users
 
 ---
 
-### 2. User Login (Token Creation)
+### 2. User Login
 
-**Endpoint:** `POST /auth/login/`
+**Endpoint:** `POST /api/v1/auth/login/`
 
-**Description:** Authenticates a user and returns JWT access and refresh tokens along with the user info of the user.
+Authenticates a user and returns JWT tokens along with user information.
 
-**Expected Request Data:**
+#### Request
+
+```http
+POST /api/v1/auth/login/
+Content-Type: application/json
+```
 
 ```json
 {
-	"email": "bruce.wyane@example.com",
-	"password": "securePassword123"
+	"email": "bruce.wayne@example.com",
+	"password": "secretpassword123"
 }
 ```
 
-**Expected Outcome (Success - 200):**
+| Field      | Type   | Required | Description              |
+| ---------- | ------ | -------- | ------------------------ |
+| `email`    | string | Yes      | Registered email address |
+| `password` | string | Yes      | User's password          |
+
+#### Response
+
+**Success (200 OK):**
 
 ```json
 {
-    "success": true,
-    "response": {
-        "tokens": {
-            "refresh": "eyJhbGciOiJIUzI1N...",
-            "access": "eyJhbGciOiJIUzI1Ni..."
-        },
-        "user": {
-            "id": 9,
-            "email": "bruce.wyane@example.com",
-            "full_name": "Bruce Wayne",
-            "phone_number": "+9700",
-            "address": "Wayne Manor, Gotham City",
-            "profile_image": null
-        }
-    },
-    "error": null
+	"tokens": {
+		"refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczMzA1MDAwMCwiaWF0IjoxNzMyNDQ1MjAwLCJqdGkiOiJhYmNkZWYxMjM0NTYiLCJ1c2VyX2lkIjo5fQ.xxxxx",
+		"access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzMyNTMxNjAwLCJpYXQiOjE3MzI0NDUyMDAsImp0aSI6IjEyMzQ1NmFiY2RlZiIsInVzZXJfaWQiOjl9.xxxxx"
+	},
+	"user": {
+		"id": 9,
+		"email": "bruce.wayne@example.com",
+		"full_name": "Bruce Wayne",
+		"phone_number": "+9700123456",
+		"address": "Wayne Manor, Gotham City",
+		"profile_image": null
+	}
 }
 ```
 
-**Expected Outcome (Error - 401):**
+**Error - Email Not Found (400 Bad Request):**
 
 ```json
 {
-    "success": false,
-    "response": null,
-    "error": {
-        "message": "Email does not exist",
-        "details": {
-            "email": "No account found with the provided email"
-        }
-    }
+	"error": "Email does not exist",
+	"details": {
+		"email": "No account found with the provided email"
+	}
 }
 ```
 
-**Response format description:**
-In case of error response, 
-- the "error" key contains the error details, while the "response" key is null.
-- the details will be a key value pair where key is the field name and value is the error message.
-- the "message" key provides a general description of the error.
+**Error - Inactive Account (400 Bad Request):**
 
+```json
+{
+	"error": "Account is inactive",
+	"details": {
+		"email": "The account associated with this email is inactive. Please contact support."
+	}
+}
+```
 
-**Developer Tips:**
+**Error - Invalid Password (400 Bad Request):**
 
-- Store the access token for authenticated requests
-- Store the refresh token to obtain new access tokens
-- Access tokens typically expire faster than refresh tokens
+```json
+{
+	"error": "Invalid password",
+	"details": {
+		"password": "The provided password is incorrect for given email."
+	}
+}
+```
 
 ---
 
 ### 3. Token Refresh
 
-**Endpoint:** `POST /auth/jwt/refresh/`
+**Endpoint:** `POST /api/v1/auth/jwt/refresh/`
 
-**Description:** Obtains a new access token using a valid refresh token.
+Refreshes the access token using a valid refresh token.
 
-**Expected Request Data:**
+#### Request
+
+```http
+POST /api/v1/auth/jwt/refresh/
+Content-Type: application/json
+```
 
 ```json
 {
-	"refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+	"refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczMzA1MDAwMCwiaWF0IjoxNzMyNDQ1MjAwLCJqdGkiOiJhYmNkZWYxMjM0NTYiLCJ1c2VyX2lkIjo5fQ.xxxxx"
 }
 ```
 
-**Expected Outcome (Success - 200):**
+| Field     | Type   | Required | Description         |
+| --------- | ------ | -------- | ------------------- |
+| `refresh` | string | Yes      | Valid refresh token |
+
+#### Response
+
+**Success (200 OK):**
 
 ```json
 {
-	"success": true,
-	"response": {
-		"access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-                "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
-	}
+	"access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzMyNjE4MDAwLCJpYXQiOjE3MzI1MzE2MDAsImp0aSI6Im5ld3Rva2VuMTIzIiwidXNlcl9pZCI6OX0.xxxxx",
+	"refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczMzEzNjQwMCwiaWF0IjoxNzMyNTMxNjAwLCJqdGkiOiJuZXdyZWZyZXNoMTIzIiwidXNlcl9pZCI6OX0.xxxxx"
 }
 ```
 
-**Expected Outcome (Error - 401):**
+**Error - Invalid Token (401 Unauthorized):**
 
 ```json
 {
-    "success": false,
-    "response": null,
-    "error": {
-        "message": "Token is invalid",
-        "details": {
-            "detail": "Token is invalid",
-            "code": "token_not_valid"
-        }
-    }
+	"detail": "Token is invalid or expired",
+	"code": "token_not_valid"
 }
 ```
-
-**Developer Tips:**
-
-- Call this endpoint before the access token expires
-- Implement token refresh logic in your frontend interceptors
 
 ---
 
 ### 4. Token Verification
 
-**Endpoint:** `POST /auth/jwt/verify/`
+**Endpoint:** `POST /api/v1/auth/jwt/verify/`
 
-**Description:** Verifies if a given token is valid and not expired.
+Verifies if a token is valid.
 
-**Expected Request Data:**
+#### Request
+
+```http
+POST /api/v1/auth/jwt/verify/
+Content-Type: application/json
+```
 
 ```json
 {
-	"token": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+	"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzMyNTMxNjAwLCJpYXQiOjE3MzI0NDUyMDAsImp0aSI6IjEyMzQ1NmFiY2RlZiIsInVzZXJfaWQiOjl9.xxxxx"
 }
 ```
 
-**Expected Outcome (Success - 200):**
+| Field   | Type   | Required | Description         |
+| ------- | ------ | -------- | ------------------- |
+| `token` | string | Yes      | JWT token to verify |
+
+#### Response
+
+**Success (200 OK):**
+
+```json
+{}
+```
+
+**Error - Invalid Token (401 Unauthorized):**
 
 ```json
 {
-    "success": true,
-    "response": {},
-    "error": null
+	"detail": "Token is invalid or expired",
+	"code": "token_not_valid"
 }
 ```
-
-**Expected Outcome (Error - 401):**
-
-```json
-{
-    "success": false,
-    "response": null,
-    "error": {
-        "message": "Token is invalid",
-        "details": {
-            "detail": "Token is invalid",
-            "code": "token_not_valid"
-        }
-    }
-}
-```
-
-**Developer Tips:**
-
-- Use this to check token validity before making authenticated requests
-- Useful for session validation on app startup
 
 ---
 
 ### 5. Get Current User Profile
 
-**Endpoint:** `GET /auth/users/me/`
+**Endpoint:** `GET /api/v1/auth/users/me/`
 
-**Description:** Retrieves the authenticated user's profile information.
+Retrieves the profile of the currently authenticated user.
 
-**Expected Request Headers:**
+#### Request
 
-```
+```http
+GET /api/v1/auth/users/me/
 Authorization: Bearer <access_token>
 ```
 
-**Expected Request Data:** None (GET request)
+#### Response
 
-**Expected Outcome (Success - 200):**
-
-```json
-{
-    "success": true,
-    "response": {
-        "id": 9,
-        "email": "bruce.wjmjakjyne@example.com",
-        "full_name": "Bruce Wayne",
-        "phone_number": "+9700",
-        "address": "Wayne Manor, Gotham City",
-        "profile_image": null
-    },
-    "error": null
-}
-```
-
-**Expected Outcome (Error - 401):**
+**Success (200 OK):**
 
 ```json
 {
-    "success": false,
-    "response": null,
-    "error": {
-        "message": "Authentication credentials were not provided.",
-        "details": {
-            "detail": "Authentication credentials were not provided."
-        }
-    }
+	"id": 9,
+	"email": "bruce.wayne@example.com",
+	"full_name": "Bruce Wayne",
+	"phone_number": "+9700123456",
+	"address": "Wayne Manor, Gotham City",
+	"profile_image": "http://localhost:8000/media/profile_images/user_9.jpg"
 }
 ```
 
-**Developer Tips:**
+**Error - Unauthorized (401 Unauthorized):**
 
-- Always include the Authorization header with Bearer token
-- Profile image returns absolute URL for easy frontend integration
-- Use this endpoint to fetch user data after login
+```json
+{
+	"detail": "Authentication credentials were not provided."
+}
+```
 
 ---
 
 ### 6. Update Current User Profile
 
-**Endpoint:** `PUT /auth/users/me/` or `PATCH /auth/users/me/`
+**Endpoint:** `PUT /api/v1/auth/users/me/` or `PATCH /api/v1/auth/users/me/`
 
-**Description:** Updates the authenticated user's profile information.
+Updates the profile of the currently authenticated user.
 
-**Expected Request Headers:**
+- `PUT` - Full update (all editable fields required)
+- `PATCH` - Partial update (only provided fields are updated)
 
-```
+#### Request
+
+```http
+PATCH /api/v1/auth/users/me/
 Authorization: Bearer <access_token>
-Content-Type: multipart/form-data  // when updating profile_image
-Content-Type: application/json    // for other fields
+Content-Type: application/json
 ```
-
-**Expected Request Data:**
 
 ```json
 {
-  "email": "bruce.wyane@example.com", // Email cannot be changed
-  "password": "123@J456789", // New password to update
-  "full_name": "Bruce Wayne Edited", // New name to update
-  "phone_number": "+9700123456", 
-  "address": "Wayne Manor, Gotham City",
-    "profile_image": <file> // optional, file upload (use multipart/form-data)
+	"full_name": "Bruce Wayne Edited",
+	"phone_number": "+9700999888",
+	"address": "New Wayne Manor, Gotham City"
 }
 ```
 
-**Expected Outcome (Success - 200):**
+| Field           | Type   | Required | Description                         |
+| --------------- | ------ | -------- | ----------------------------------- |
+| `full_name`     | string | No\*     | User's full name                    |
+| `phone_number`  | string | No\*     | Phone number (7-13 digits)          |
+| `address`       | string | No\*     | User's address                      |
+| `profile_image` | file   | No\*     | Profile image (multipart/form-data) |
+
+\*For PUT requests, all fields should be provided. For PATCH requests, only the fields to update are required.
+
+#### Response
+
+**Success (200 OK):**
 
 ```json
 {
-    "success": true,
-    "response": {
-        "id": 9,
-        "email": "bruce.wyane@example.com",
-        "full_name": "Bruce Wayne edited",
-        "phone_number": "+9700123456",
-        "address": "Wayne Manor, Gotham City",
-        "profile_image": null
-    },
-    "error": null
+	"id": 9,
+	"email": "bruce.wayne@example.com",
+	"full_name": "Bruce Wayne Edited",
+	"phone_number": "+9700999888",
+	"address": "New Wayne Manor, Gotham City",
+	"profile_image": "http://localhost:8000/media/profile_images/user_9.jpg"
 }
 ```
 
-**Developer Tips:**
+**Error - Validation Error (400 Bad Request):**
 
-- Use `PATCH` for partial updates, `PUT` for full updates
-- Email cannot be changed through this endpoint (it's the unique identifier)
-- When updating profile image, old image is replaced
+```json
+{
+	"phone_number": ["Phone number must be between 7-13 digits"]
+}
+```
 
 ---
 
-## Response Mechanism
+## Authentication
 
-The app uses a custom response structure to ensure consistent API responses across all endpoints. 
-The response is always structured in JSON format and includes the following keys:
+This app uses JWT (JSON Web Tokens) for authentication.
 
-### Response Keys:
+### Token Configuration
 
-1. **success** (boolean) - Indicates whether the request was successful or not. This key is always present in every response.
+| Setting                  | Value  | Description                            |
+| ------------------------ | ------ | -------------------------------------- |
+| Access Token Lifetime    | 1 day  | Token used for API requests            |
+| Refresh Token Lifetime   | 7 days | Token used to obtain new access tokens |
+| Rotate Refresh Tokens    | Yes    | New refresh token issued on refresh    |
+| Blacklist After Rotation | Yes    | Old refresh tokens are invalidated     |
 
-2. **response** (object) - Contains the actual response data when the request is successful.(It is always present but can be null in error responses)
+### Using Authentication
 
-3. **error** (object) - Contains error details when the request fails. Only present on failed requests.
+Include the access token in the `Authorization` header for protected endpoints:
 
-### Success Response (2xx)
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Token Refresh Flow
+
+1. When the access token expires, send the refresh token to `/api/v1/auth/jwt/refresh/`
+2. Receive new access and refresh tokens
+3. Use the new access token for subsequent requests
+4. Store the new refresh token for future refreshes
+
+---
+
+## Error Handling
+
+All error responses follow a consistent format:
+
+### Validation Errors
 
 ```json
 {
-	"success": true,
-	"response": {
-		// actual response data
+	"field_name": ["Error message 1", "Error message 2"]
+}
+```
+
+### Authentication Errors
+
+```json
+{
+	"detail": "Error description",
+	"code": "error_code"
+}
+```
+
+### Custom Error Format (Login)
+
+```json
+{
+	"error": "Human-readable error title",
+	"details": {
+		"field": "Detailed error message"
 	}
 }
 ```
 
-### Error Response (4xx/5xx)
-
-```json
-{
-	"success": false,
-	"error": {
-		"name": "error_name",
-		"message": "Error description",
-		"details": "Additional error details"
-	},
-    "response": null // but it is not 100% guranteed to be null even in error responses
-}
-```
-
-[//]: # ()
-[//]: # (### Response Utility Functions &#40;For Developers&#41;)
-
-[//]: # (The following is the code snippet for the response utility functions used to generate consistent responses:)
-
-[//]: # ()
-[//]: # ()
-[//]: # (```python)
-
-[//]: # (# Success response with data and status code)
-
-[//]: # (def success_response&#40;data, status=200&#41;:)
-
-[//]: # (    return Response&#40;{"success": True, "response": data}, status=status&#41;)
-
-[//]: # ()
-[//]: # (# Error response with message, details, error name, and status code)
-
-[//]: # (def error_response&#40;message, details="", error_name="error", status=400&#41;:)
-
-[//]: # (    return Response&#40;)
-
-[//]: # (        {)
-
-[//]: # (            "success": False,)
-
-[//]: # (            "error": {"name": error_name, "message": message, "details": details},)
-
-[//]: # (        },)
-
-[//]: # (        status=status,)
-
-[//]: # (    &#41;)
-
-[//]: # (```)
-
 ---
 
-## Working with the User Model (For Developers)
+## Usage Examples
 
-The app uses a custom User model that extends Django's built-in AbstractBaseUser and PermissionsMixin. This allows for email-based authentication and additional profile fields.
+### cURL Examples
 
-
-### Current Model Structure
-
-The custom `User` model extends Django's `AbstractBaseUser` and `PermissionsMixin` with the following fields:
-
-- **email** (EmailField, unique, required) - Primary authentication field
-- **full_name** (CharField, required) - User's full name
-- **phone_number** (CharField, optional) - Contact number
-- **address** (TextField, optional) - Physical address
-- **profile_image** (ImageField, optional) - Profile picture
-- **is_active** (BooleanField, default=True) - Account status
-- **is_staff** (BooleanField, default=False) - Admin access
-
-### Adding New Fields to the User Model
-
-To add new fields to the User model:
-
-1. **Add the field to the model** (`accounts/models.py`):
-
-```python
-from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-
-class User(AbstractBaseUser, PermissionsMixin):
-    # ...existing fields...
-
-    # New field example - optional field
-    date_of_birth = models.DateField(blank=True, null=True)
-
-    # New field example - required field
-    country = models.CharField(max_length=100, default='Unknown')
-
-    # New field example - with choices
-    GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('O', 'Other'),
-    ]
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, null=True)
-```
-
-2. **Update the serializers** (`accounts/serializers.py`):
-
-```python
-from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
-from djoser.serializers import UserSerializer as BaseUserSerializer
-from rest_framework import serializers
-
-from .models import User
-
-class UserCreateSerializer(BaseUserCreateSerializer):
-    # Add new fields here
-    date_of_birth = serializers.DateField(required=False, allow_null=True)
-    country = serializers.CharField(required=True)
-    gender = serializers.ChoiceField(choices=User.GENDER_CHOICES, required=False, allow_null=True)
-
-    class Meta(BaseUserCreateSerializer.Meta):
-        model = User
-        fields = (
-            "id",
-            "email",
-            "password",
-            "full_name",
-            "phone_number",
-            "address",
-            "profile_image",
-            "date_of_birth",  # new field
-            "country",  # new field
-            "gender",  # new field
-        )
-
-class UserSerializer(BaseUserSerializer):
-    class Meta(BaseUserSerializer.Meta):
-        model = User
-        fields = (
-            "id",
-            "email",
-            "full_name",
-            "phone_number",
-            "address",
-            "profile_image",
-            "date_of_birth",  # new field
-            "country",  # new field
-            "gender",  # new field
-        )
-```
-
-3. **Run migrations**:
+**Register a new user:**
 
 ```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-**If using UV (Which is highly recommended):**
-
-```bash
-uv run manage.py makemigrations
-uv run manage.py migrate
-```
-
-### Field Options Guide
-
-**Making fields optional:**
-
-- Add `blank=True, null=True` to the model field
-- Set `required=False` in the serializer
-
-**Making fields required:**
-
-- Remove `blank=True, null=True` from model (or add `blank=False`)
-- Set `required=True` in the serializer or add to `REQUIRED_FIELDS`
-
-**Adding default values:**
-
-- Add `default='value'` to the model field
-
-**Adding validation:**
-
-- Use Django's built-in validators or create custom ones
-- Add validation in the serializer's `validate_<field_name>` method
-
-### Developer Tips
-
-1. **Using the User model in other apps:**
-
-```python
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-# Create a user
-user = User.objects.create_user(
-    email='test@example.com',
-    password='password123',
-    full_name='Test User'
-)
-
-# Get user by email
-user = User.objects.get(email='test@example.com')
-
-# Update user
-user.full_name = 'Updated Name'
-user.save()
-```
-
-2. **Profile image handling:**
-
-- Images are automatically stored in `media/profile_images/user_<id>.<ext>`
-- The `save()` method is overridden to ensure ID exists before saving images
-- Old images are replaced when uploading new ones
-
-3. **Authentication:**
-
-- Login uses `email` instead of username
-- `USERNAME_FIELD = "email"` configures this
-- Password is automatically hashed by `set_password()`
-
-4. **Admin access:**
-
-- Set `is_staff=True` to give admin panel access
-- Set `is_superuser=True` for full admin permissions
-
----
-
-## Testing the API
-
-### Using cURL
-
-```bash
-# Register a user
-curl -X POST http://localhost:8000/auth/users/ \
+curl -X POST http://localhost:8000/api/v1/auth/signup/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"test123","full_name":"Test User"}'
+  -d '{
+    "email": "test@example.com",
+    "password": "mypassword123",
+    "full_name": "Test User"
+  }'
+```
 
-# Login
-curl -X POST http://localhost:8000/auth/jwt/create/ \
+**Login:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"test123"}'
+  -d '{
+    "email": "test@example.com",
+    "password": "mypassword123"
+  }'
+```
 
-# Get user profile
-curl -X GET http://localhost:8000/auth/users/me/ \
+**Get current user profile:**
+
+```bash
+curl -X GET http://localhost:8000/api/v1/auth/users/me/ \
   -H "Authorization: Bearer <access_token>"
 ```
 
-### Using Postman or Thunder Client
+**Update profile:**
 
-1. Set the request method (GET, POST, PUT, PATCH)
-2. Add the endpoint URL
-3. For authenticated requests, add header: `Authorization: Bearer <token>`
-4. For file uploads, use `form-data` body type
-5. Check the response structure matches the expected format
+```bash
+curl -X PATCH http://localhost:8000/api/v1/auth/users/me/ \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "Updated Name"
+  }'
+```
+
+**Upload profile image:**
+
+```bash
+curl -X PATCH http://localhost:8000/api/v1/auth/users/me/ \
+  -H "Authorization: Bearer <access_token>" \
+  -F "profile_image=@/path/to/image.jpg"
+```
 
 ---
 
-## Troubleshooting
+## File Structure
 
-**Issue:** "User with this email already exists"
+```
+accounts/
+├── __init__.py
+├── admin.py          # Admin configuration for User model
+├── apps.py           # App configuration
+├── models.py         # User model definition
+├── serializers.py    # DRF serializers for User
+├── urls.py           # URL routing
+├── views.py          # API views
+├── tests.py          # Test cases
+└── migrations/       # Database migrations
+```
 
-- Solution: Email must be unique. Use a different email or delete the existing user.
+---
 
-**Issue:** "Authentication credentials were not provided"
+## Dependencies
 
-- Solution: Include the `Authorization: Bearer <token>` header in your request.
-
-**Issue:** "Token is invalid or expired"
-
-- Solution: Refresh your access token using the `/auth/jwt/refresh/` endpoint.
-
-**Issue:** Profile image not uploading
-
-- Solution: Ensure `Content-Type: multipart/form-data` is set and file is in correct format.
-
-**Issue:** Migrations failing after adding new fields
-
-- Solution: Provide default values for new required fields or make them optional.
+- Django >= 4.0
+- Django REST Framework
+- djangorestframework-simplejwt
+- Pillow (for image handling)

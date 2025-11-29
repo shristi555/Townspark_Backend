@@ -24,9 +24,10 @@ urlpatterns = [
     
     # API v1 endpoints
     path('api/v1/', include('accounts.urls')),
-    path('api/v1/', include('core.urls')),
-    path('api/v1/', include('issues.urls')),
-    path('api/v1/', include('notifications.urls')),
+    # TODO: Add these when the apps are created
+    # path('api/v1/', include('core.urls')),
+    # path('api/v1/', include('issues.urls')),
+    # path('api/v1/', include('notifications.urls')),
 ]
 
 # Serve media files in development
