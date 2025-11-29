@@ -26,8 +26,8 @@ urlpatterns = [
     path('api/v1/', include('accounts.urls')),
     path('api/v1/', include('issue.urls')),
     path('api/v1/', include('progress.urls')),
+    path('api/v1/', include('comment.urls')),
     # TODO: Add these when the apps are created
-    # path('api/v1/', include('comments.urls')),
     # path('api/v1/', include('likes.urls')),
 ]
 
