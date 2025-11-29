@@ -31,9 +31,14 @@ class UserCreateSerializer(BaseUserCreateSerializer):
         )
         extra_kwargs = {"password": {"write_only": True}, "email": {"required": True}}
 
+    def validate(self, attrs):
+        # Extract user_type before parent validation
+        self.user_type = attrs.pop('user_type', 'citizen')
+        return super().validate(attrs)
+
     def create(self, validated_data):
-        user_type = validated_data.pop('user_type', 'citizen')
-        if user_type == 'resolver':
+        # Set role based on user_type
+        if self.user_type == 'resolver':
             validated_data['role'] = UserRole.RESOLVER
         else:
             validated_data['role'] = UserRole.CITIZEN
