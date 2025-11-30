@@ -41,48 +41,48 @@ The Issue model represents a complaint or issue submitted by users.
 
 ### Category Values
 
-| Category | Label | Group |
-| -------- | ----- | ----- |
-| `road_damage` | Road Damage / Potholes | Infrastructure & Roads |
-| `road_construction` | Road Construction Issue | Infrastructure & Roads |
-| `bridge_damage` | Bridge Damage | Infrastructure & Roads |
-| `footpath_damage` | Footpath / Sidewalk Damage | Infrastructure & Roads |
-| `speed_bump` | Speed Bump Required | Infrastructure & Roads |
-| `garbage_pile` | Garbage Pile / Littering | Sanitation & Waste |
-| `garbage_collection` | Garbage Collection Issue | Sanitation & Waste |
-| `illegal_dumping` | Illegal Dumping | Sanitation & Waste |
-| `overflowing_bins` | Overflowing Bins | Sanitation & Waste |
-| `dead_animal` | Dead Animal Removal | Sanitation & Waste |
-| `water_leak` | Water Leakage | Water & Drainage |
-| `water_supply` | Water Supply Issue | Water & Drainage |
-| `drainage_blockage` | Drainage / Sewer Blockage | Water & Drainage |
-| `flooding` | Flooding / Waterlogging | Water & Drainage |
-| `open_manhole` | Open Manhole | Water & Drainage |
-| `street_light` | Street Light Not Working | Electricity & Lighting |
-| `power_outage` | Power Outage | Electricity & Lighting |
-| `damaged_pole` | Damaged Electric Pole | Electricity & Lighting |
-| `exposed_wires` | Exposed / Dangerous Wires | Electricity & Lighting |
-| `park_maintenance` | Park Maintenance | Public Spaces & Parks |
-| `playground_damage` | Playground Equipment Damage | Public Spaces & Parks |
-| `bench_damage` | Public Bench Damage | Public Spaces & Parks |
-| `tree_fallen` | Fallen Tree / Branch | Public Spaces & Parks |
-| `overgrown_vegetation` | Overgrown Vegetation | Public Spaces & Parks |
-| `traffic_signal` | Traffic Signal Malfunction | Traffic & Signage |
-| `missing_sign` | Missing / Damaged Sign | Traffic & Signage |
-| `road_marking` | Faded Road Markings | Traffic & Signage |
-| `parking_violation` | Illegal Parking | Traffic & Signage |
-| `stray_animals` | Stray Animals | Public Safety |
-| `abandoned_vehicle` | Abandoned Vehicle | Public Safety |
-| `unsafe_building` | Unsafe / Dangerous Building | Public Safety |
-| `noise_complaint` | Noise Complaint | Public Safety |
-| `encroachment` | Encroachment / Illegal Construction | Public Safety |
-| `public_toilet` | Public Toilet Issue | Public Facilities |
-| `bus_stop_damage` | Bus Stop Damage | Public Facilities |
-| `public_tap` | Public Tap / Water Point Issue | Public Facilities |
-| `air_pollution` | Air Pollution | Environment |
-| `water_pollution` | Water Body Pollution | Environment |
-| `mosquito_breeding` | Mosquito Breeding | Environment |
-| `other` | Other | Other |
+| Category               | Label                               | Group                  |
+| ---------------------- | ----------------------------------- | ---------------------- |
+| `road_damage`          | Road Damage / Potholes              | Infrastructure & Roads |
+| `road_construction`    | Road Construction Issue             | Infrastructure & Roads |
+| `bridge_damage`        | Bridge Damage                       | Infrastructure & Roads |
+| `footpath_damage`      | Footpath / Sidewalk Damage          | Infrastructure & Roads |
+| `speed_bump`           | Speed Bump Required                 | Infrastructure & Roads |
+| `garbage_pile`         | Garbage Pile / Littering            | Sanitation & Waste     |
+| `garbage_collection`   | Garbage Collection Issue            | Sanitation & Waste     |
+| `illegal_dumping`      | Illegal Dumping                     | Sanitation & Waste     |
+| `overflowing_bins`     | Overflowing Bins                    | Sanitation & Waste     |
+| `dead_animal`          | Dead Animal Removal                 | Sanitation & Waste     |
+| `water_leak`           | Water Leakage                       | Water & Drainage       |
+| `water_supply`         | Water Supply Issue                  | Water & Drainage       |
+| `drainage_blockage`    | Drainage / Sewer Blockage           | Water & Drainage       |
+| `flooding`             | Flooding / Waterlogging             | Water & Drainage       |
+| `open_manhole`         | Open Manhole                        | Water & Drainage       |
+| `street_light`         | Street Light Not Working            | Electricity & Lighting |
+| `power_outage`         | Power Outage                        | Electricity & Lighting |
+| `damaged_pole`         | Damaged Electric Pole               | Electricity & Lighting |
+| `exposed_wires`        | Exposed / Dangerous Wires           | Electricity & Lighting |
+| `park_maintenance`     | Park Maintenance                    | Public Spaces & Parks  |
+| `playground_damage`    | Playground Equipment Damage         | Public Spaces & Parks  |
+| `bench_damage`         | Public Bench Damage                 | Public Spaces & Parks  |
+| `tree_fallen`          | Fallen Tree / Branch                | Public Spaces & Parks  |
+| `overgrown_vegetation` | Overgrown Vegetation                | Public Spaces & Parks  |
+| `traffic_signal`       | Traffic Signal Malfunction          | Traffic & Signage      |
+| `missing_sign`         | Missing / Damaged Sign              | Traffic & Signage      |
+| `road_marking`         | Faded Road Markings                 | Traffic & Signage      |
+| `parking_violation`    | Illegal Parking                     | Traffic & Signage      |
+| `stray_animals`        | Stray Animals                       | Public Safety          |
+| `abandoned_vehicle`    | Abandoned Vehicle                   | Public Safety          |
+| `unsafe_building`      | Unsafe / Dangerous Building         | Public Safety          |
+| `noise_complaint`      | Noise Complaint                     | Public Safety          |
+| `encroachment`         | Encroachment / Illegal Construction | Public Safety          |
+| `public_toilet`        | Public Toilet Issue                 | Public Facilities      |
+| `bus_stop_damage`      | Bus Stop Damage                     | Public Facilities      |
+| `public_tap`           | Public Tap / Water Point Issue      | Public Facilities      |
+| `air_pollution`        | Air Pollution                       | Environment            |
+| `water_pollution`      | Water Body Pollution                | Environment            |
+| `mosquito_breeding`    | Mosquito Breeding                   | Environment            |
+| `other`                | Other                               | Other                  |
 
 ---
 
@@ -112,11 +112,11 @@ Content-Type: application/json
 }
 ```
 
-| Field         | Type   | Required | Description                              |
-| ------------- | ------ | -------- | ---------------------------------------- |
-| `title`       | string | Yes      | Title of the issue                       |
-| `description` | string | Yes      | Detailed description                     |
-| `category`    | string | No       | Issue category (default: "other")        |
+| Field         | Type   | Required | Description                       |
+| ------------- | ------ | -------- | --------------------------------- |
+| `title`       | string | Yes      | Title of the issue                |
+| `description` | string | Yes      | Detailed description              |
+| `category`    | string | No       | Issue category (default: "other") |
 
 #### Response
 
