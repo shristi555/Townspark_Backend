@@ -17,6 +17,14 @@ class UserMinimalSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "email")
 
 
+class CategorySerializer(serializers.Serializer):
+    """
+    Serializer for listing all available issue categories.
+    """
+    value = serializers.CharField(help_text="Category value used in API requests")
+    label = serializers.CharField(help_text="Human-readable category name")
+
+
 class IssueSerializer(serializers.ModelSerializer):
     """
     Serializer for Issue model.
@@ -26,6 +34,7 @@ class IssueSerializer(serializers.ModelSerializer):
     """
     created_by = UserMinimalSerializer(read_only=True)
     resolved_by = UserMinimalSerializer(read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
 
     class Meta:
         model = Issue
@@ -33,26 +42,28 @@ class IssueSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "category",
+            "category_display",
             "status",
             "created_at",
             "updated_at",
             "created_by",
             "resolved_by",
         )
-        read_only_fields = ("id", "created_at", "updated_at", "created_by", "resolved_by")
+        read_only_fields = ("id", "created_at", "updated_at", "created_by", "resolved_by", "category_display")
 
 
 class IssueCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating a new issue.
     
-    Only requires title and description.
+    Requires title, description, and optionally category.
     Status defaults to 'open', created_by is set from request.user.
     """
 
     class Meta:
         model = Issue
-        fields = ("id", "title", "description")
+        fields = ("id", "title", "description", "category")
         read_only_fields = ("id",)
 
     def create(self, validated_data):
@@ -70,13 +81,13 @@ class IssueUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating an issue.
     
-    Allows updating: title, description, status
+    Allows updating: title, description, category, status
     Only staff can update status to 'resolved' and set resolved_by.
     """
 
     class Meta:
         model = Issue
-        fields = ("id", "title", "description", "status")
+        fields = ("id", "title", "description", "category", "status")
         read_only_fields = ("id",)
 
     def validate_status(self, value):
@@ -118,6 +129,7 @@ class IssueListSerializer(serializers.ModelSerializer):
     """
     created_by = UserMinimalSerializer(read_only=True)
     resolved_by = UserMinimalSerializer(read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
 
     class Meta:
         model = Issue
@@ -125,6 +137,8 @@ class IssueListSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "category",
+            "category_display",
             "status",
             "created_at",
             "updated_at",

@@ -5,6 +5,8 @@ from .views import (
     IssueDetailView,
     IssueUpdateView,
     IssueDeleteView,
+    CategoryListView,
+    IssueByCategoryView,
 )
 
 urlpatterns = [
@@ -14,4 +16,8 @@ urlpatterns = [
     path("issues/detail/<int:pk>/", IssueDetailView.as_view(), name="issue-detail"),
     path("issues/update/<int:pk>/", IssueUpdateView.as_view(), name="issue-update"),
     path("issues/delete/<int:pk>/", IssueDeleteView.as_view(), name="issue-delete"),
+    
+    # Category endpoints
+    path("issues/categories/", CategoryListView.as_view(), name="category-list"),
+    path("issues/category/<str:category>/", IssueByCategoryView.as_view(), name="issues-by-category"),
 ]

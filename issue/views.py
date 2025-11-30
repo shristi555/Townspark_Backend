@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.shortcuts import get_object_or_404
 
 from .models import Issue
@@ -10,6 +10,7 @@ from .serializers import (
     IssueCreateSerializer,
     IssueUpdateSerializer,
     IssueListSerializer,
+    CategorySerializer,
 )
 
 
@@ -77,6 +78,11 @@ class IssueListView(APIView):
         status_filter = request.query_params.get("status")
         if status_filter:
             issues = issues.filter(status=status_filter)
+        
+        # Optional filtering by category
+        category_filter = request.query_params.get("category")
+        if category_filter:
+            issues = issues.filter(category=category_filter)
         
         serializer = IssueListSerializer(issues, many=True, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -184,3 +190,56 @@ class IssueDeleteView(APIView):
             {"message": "Issue deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
+
+
+class CategoryListView(APIView):
+    """
+    GET /issues/categories/ - List all available issue categories
+    
+    No authentication required. Returns all category choices.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        categories = [
+            {"value": value, "label": label}
+            for value, label in Issue.CATEGORY_CHOICES
+        ]
+        return Response(categories, status=status.HTTP_200_OK)
+
+
+class IssueByCategoryView(APIView):
+    """
+    GET /issues/category/{category}/ - List issues by category
+    
+    Requires authentication.
+    - Regular users see only their own issues in the category
+    - Staff and Admin users see all issues in the category
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, category):
+        user = request.user
+        
+        # Validate category
+        valid_categories = [choice[0] for choice in Issue.CATEGORY_CHOICES]
+        if category not in valid_categories:
+            return Response(
+                {"error": f"Invalid category. Valid categories are: {', '.join(valid_categories)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Staff and admin can see all issues in category
+        if user.is_staff or user.is_admin:
+            issues = Issue.objects.filter(category=category)
+        else:
+            # Regular users only see their own issues in category
+            issues = Issue.objects.filter(created_by=user, category=category)
+        
+        # Optional filtering by status
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            issues = issues.filter(status=status_filter)
+        
+        serializer = IssueListSerializer(issues, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)

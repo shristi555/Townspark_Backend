@@ -20,8 +20,76 @@ class Issue(models.Model):
         ("closed", "Closed"),
     ]
 
+    CATEGORY_CHOICES = [
+        # Infrastructure & Roads
+        ("road_damage", "Road Damage / Potholes"),
+        ("road_construction", "Road Construction Issue"),
+        ("bridge_damage", "Bridge Damage"),
+        ("footpath_damage", "Footpath / Sidewalk Damage"),
+        ("speed_bump", "Speed Bump Required"),
+        
+        # Sanitation & Waste
+        ("garbage_pile", "Garbage Pile / Littering"),
+        ("garbage_collection", "Garbage Collection Issue"),
+        ("illegal_dumping", "Illegal Dumping"),
+        ("overflowing_bins", "Overflowing Bins"),
+        ("dead_animal", "Dead Animal Removal"),
+        
+        # Water & Drainage
+        ("water_leak", "Water Leakage"),
+        ("water_supply", "Water Supply Issue"),
+        ("drainage_blockage", "Drainage / Sewer Blockage"),
+        ("flooding", "Flooding / Waterlogging"),
+        ("open_manhole", "Open Manhole"),
+        
+        # Electricity & Lighting
+        ("street_light", "Street Light Not Working"),
+        ("power_outage", "Power Outage"),
+        ("damaged_pole", "Damaged Electric Pole"),
+        ("exposed_wires", "Exposed / Dangerous Wires"),
+        
+        # Public Spaces & Parks
+        ("park_maintenance", "Park Maintenance"),
+        ("playground_damage", "Playground Equipment Damage"),
+        ("bench_damage", "Public Bench Damage"),
+        ("tree_fallen", "Fallen Tree / Branch"),
+        ("overgrown_vegetation", "Overgrown Vegetation"),
+        
+        # Traffic & Signage
+        ("traffic_signal", "Traffic Signal Malfunction"),
+        ("missing_sign", "Missing / Damaged Sign"),
+        ("road_marking", "Faded Road Markings"),
+        ("parking_violation", "Illegal Parking"),
+        
+        # Public Safety
+        ("stray_animals", "Stray Animals"),
+        ("abandoned_vehicle", "Abandoned Vehicle"),
+        ("unsafe_building", "Unsafe / Dangerous Building"),
+        ("noise_complaint", "Noise Complaint"),
+        ("encroachment", "Encroachment / Illegal Construction"),
+        
+        # Public Facilities
+        ("public_toilet", "Public Toilet Issue"),
+        ("bus_stop_damage", "Bus Stop Damage"),
+        ("public_tap", "Public Tap / Water Point Issue"),
+        
+        # Environment
+        ("air_pollution", "Air Pollution"),
+        ("water_pollution", "Water Body Pollution"),
+        ("mosquito_breeding", "Mosquito Breeding"),
+        
+        # Other
+        ("other", "Other"),
+    ]
+
     title = models.CharField(max_length=255)
     description = models.TextField()
+    category = models.CharField(
+        max_length=50,
+        choices=CATEGORY_CHOICES,
+        default="other",
+        help_text="Category of the issue"
+    )
     status = models.CharField(
         max_length=20, 
         choices=STATUS_CHOICES, 

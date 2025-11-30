@@ -23,6 +23,7 @@ The Issue model represents a complaint or issue submitted by users.
 | `id`          | AutoField     | Auto     | Primary key                         |
 | `title`       | CharField     | Yes      | Issue title (max 255 chars)         |
 | `description` | TextField     | Yes      | Detailed description of the issue   |
+| `category`    | CharField     | No       | Issue category (default: "other")   |
 | `status`      | CharField     | No       | Current status (default: "open")    |
 | `created_at`  | DateTimeField | Auto     | When the issue was created          |
 | `updated_at`  | DateTimeField | Auto     | When the issue was last updated     |
@@ -37,6 +38,51 @@ The Issue model represents a complaint or issue submitted by users.
 | `in_progress` | Issue is being worked on      |
 | `resolved`    | Issue has been resolved       |
 | `closed`      | Issue has been closed         |
+
+### Category Values
+
+| Category | Label | Group |
+| -------- | ----- | ----- |
+| `road_damage` | Road Damage / Potholes | Infrastructure & Roads |
+| `road_construction` | Road Construction Issue | Infrastructure & Roads |
+| `bridge_damage` | Bridge Damage | Infrastructure & Roads |
+| `footpath_damage` | Footpath / Sidewalk Damage | Infrastructure & Roads |
+| `speed_bump` | Speed Bump Required | Infrastructure & Roads |
+| `garbage_pile` | Garbage Pile / Littering | Sanitation & Waste |
+| `garbage_collection` | Garbage Collection Issue | Sanitation & Waste |
+| `illegal_dumping` | Illegal Dumping | Sanitation & Waste |
+| `overflowing_bins` | Overflowing Bins | Sanitation & Waste |
+| `dead_animal` | Dead Animal Removal | Sanitation & Waste |
+| `water_leak` | Water Leakage | Water & Drainage |
+| `water_supply` | Water Supply Issue | Water & Drainage |
+| `drainage_blockage` | Drainage / Sewer Blockage | Water & Drainage |
+| `flooding` | Flooding / Waterlogging | Water & Drainage |
+| `open_manhole` | Open Manhole | Water & Drainage |
+| `street_light` | Street Light Not Working | Electricity & Lighting |
+| `power_outage` | Power Outage | Electricity & Lighting |
+| `damaged_pole` | Damaged Electric Pole | Electricity & Lighting |
+| `exposed_wires` | Exposed / Dangerous Wires | Electricity & Lighting |
+| `park_maintenance` | Park Maintenance | Public Spaces & Parks |
+| `playground_damage` | Playground Equipment Damage | Public Spaces & Parks |
+| `bench_damage` | Public Bench Damage | Public Spaces & Parks |
+| `tree_fallen` | Fallen Tree / Branch | Public Spaces & Parks |
+| `overgrown_vegetation` | Overgrown Vegetation | Public Spaces & Parks |
+| `traffic_signal` | Traffic Signal Malfunction | Traffic & Signage |
+| `missing_sign` | Missing / Damaged Sign | Traffic & Signage |
+| `road_marking` | Faded Road Markings | Traffic & Signage |
+| `parking_violation` | Illegal Parking | Traffic & Signage |
+| `stray_animals` | Stray Animals | Public Safety |
+| `abandoned_vehicle` | Abandoned Vehicle | Public Safety |
+| `unsafe_building` | Unsafe / Dangerous Building | Public Safety |
+| `noise_complaint` | Noise Complaint | Public Safety |
+| `encroachment` | Encroachment / Illegal Construction | Public Safety |
+| `public_toilet` | Public Toilet Issue | Public Facilities |
+| `bus_stop_damage` | Bus Stop Damage | Public Facilities |
+| `public_tap` | Public Tap / Water Point Issue | Public Facilities |
+| `air_pollution` | Air Pollution | Environment |
+| `water_pollution` | Water Body Pollution | Environment |
+| `mosquito_breeding` | Mosquito Breeding | Environment |
+| `other` | Other | Other |
 
 ---
 
@@ -61,14 +107,16 @@ Content-Type: application/json
 ```json
 {
 	"title": "Pothole on Main Street",
-	"description": "There is a large pothole on Main Street near the intersection with Oak Avenue. It's causing damage to vehicles."
+	"description": "There is a large pothole on Main Street near the intersection with Oak Avenue. It's causing damage to vehicles.",
+	"category": "road_damage"
 }
 ```
 
-| Field         | Type   | Required | Description          |
-| ------------- | ------ | -------- | -------------------- |
-| `title`       | string | Yes      | Title of the issue   |
-| `description` | string | Yes      | Detailed description |
+| Field         | Type   | Required | Description                              |
+| ------------- | ------ | -------- | ---------------------------------------- |
+| `title`       | string | Yes      | Title of the issue                       |
+| `description` | string | Yes      | Detailed description                     |
+| `category`    | string | No       | Issue category (default: "other")        |
 
 #### Response
 
@@ -79,6 +127,8 @@ Content-Type: application/json
 	"id": 1,
 	"title": "Pothole on Main Street",
 	"description": "There is a large pothole on Main Street near the intersection with Oak Avenue. It's causing damage to vehicles.",
+	"category": "road_damage",
+	"category_display": "Road Damage / Potholes",
 	"status": "open",
 	"created_at": "2024-01-01T12:00:00Z",
 	"updated_at": "2024-01-01T12:00:00Z",
@@ -127,14 +177,15 @@ Authorization: Bearer <access_token>
 
 **Optional Query Parameters:**
 
-| Parameter | Type   | Description                                            |
-| --------- | ------ | ------------------------------------------------------ |
-| `status`  | string | Filter by status (open, in_progress, resolved, closed) |
+| Parameter  | Type   | Description                                            |
+| ---------- | ------ | ------------------------------------------------------ |
+| `status`   | string | Filter by status (open, in_progress, resolved, closed) |
+| `category` | string | Filter by category (see Category Values above)         |
 
-**Example with filter:**
+**Example with filters:**
 
 ```http
-GET /api/v1/issues/list/?status=open
+GET /api/v1/issues/list/?status=open&category=road_damage
 Authorization: Bearer <access_token>
 ```
 
@@ -148,6 +199,8 @@ Authorization: Bearer <access_token>
 		"id": 1,
 		"title": "Pothole on Main Street",
 		"description": "There is a large pothole on Main Street near the intersection with Oak Avenue.",
+		"category": "road_damage",
+		"category_display": "Road Damage / Potholes",
 		"status": "open",
 		"created_at": "2024-01-01T12:00:00Z",
 		"updated_at": "2024-01-01T12:00:00Z",
@@ -161,6 +214,8 @@ Authorization: Bearer <access_token>
 		"id": 2,
 		"title": "Broken Street Light",
 		"description": "The street light at 123 Elm Street has been broken for a week.",
+		"category": "street_light",
+		"category_display": "Street Light Not Working",
 		"status": "in_progress",
 		"created_at": "2024-01-02T12:00:00Z",
 		"updated_at": "2024-01-03T12:00:00Z",
@@ -461,6 +516,124 @@ curl -X DELETE http://localhost:8000/api/v1/issues/delete/1/ \
   -H "Authorization: Bearer <access_token>"
 ```
 
+**Get all categories:**
+
+```bash
+curl -X GET http://localhost:8000/api/v1/issues/categories/
+```
+
+**Get issues by category:**
+
+```bash
+curl -X GET http://localhost:8000/api/v1/issues/category/road_damage/ \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## Category Endpoints
+
+### 6. List All Categories
+
+**Endpoint:** `GET /api/v1/issues/categories/`
+
+Lists all available issue categories. No authentication required.
+
+#### Request
+
+```http
+GET /api/v1/issues/categories/
+```
+
+#### Response
+
+**Success (200 OK):**
+
+```json
+[
+	{
+		"value": "road_damage",
+		"label": "Road Damage / Potholes"
+	},
+	{
+		"value": "road_construction",
+		"label": "Road Construction Issue"
+	},
+	{
+		"value": "garbage_pile",
+		"label": "Garbage Pile / Littering"
+	},
+	{
+		"value": "street_light",
+		"label": "Street Light Not Working"
+	}
+	// ... more categories
+]
+```
+
+---
+
+### 7. List Issues by Category
+
+**Endpoint:** `GET /api/v1/issues/category/{category}/`
+
+Lists all issues in a specific category. Requires authentication.
+
+- **Regular users**: See only their own issues in the category
+- **Staff/Admin users**: See all issues in the category
+
+#### Request
+
+```http
+GET /api/v1/issues/category/road_damage/
+Authorization: Bearer <access_token>
+```
+
+**Optional Query Parameters:**
+
+| Parameter | Type   | Description                                            |
+| --------- | ------ | ------------------------------------------------------ |
+| `status`  | string | Filter by status (open, in_progress, resolved, closed) |
+
+**Example with filter:**
+
+```http
+GET /api/v1/issues/category/road_damage/?status=open
+Authorization: Bearer <access_token>
+```
+
+#### Response
+
+**Success (200 OK):**
+
+```json
+[
+	{
+		"id": 1,
+		"title": "Pothole on Main Street",
+		"description": "Large pothole near intersection.",
+		"category": "road_damage",
+		"category_display": "Road Damage / Potholes",
+		"status": "open",
+		"created_at": "2024-01-01T12:00:00Z",
+		"updated_at": "2024-01-01T12:00:00Z",
+		"created_by": {
+			"id": 9,
+			"email": "bruce.wayne@example.com"
+		},
+		"resolved_by": null
+	}
+]
+```
+
+**Error (400 Bad Request) - Invalid category:**
+
+```json
+{
+	"error": "Invalid category. Valid categories are: road_damage, road_construction, ..."
+}
+```
+
 ---
 
 ## File Structure
@@ -476,7 +649,8 @@ issue/
 ├── views.py          # API views
 ├── tests.py          # Test cases
 └── migrations/       # Database migrations
-    └── 0001_initial.py
+    ├── 0001_initial.py
+    └── 0002_issue_category.py
 ```
 
 ---
