@@ -61,6 +61,9 @@ class UserSerializer(serializers.ModelSerializer):
             "phone_number",
             "address",
             "profile_image",
+            "is_staff",
+            "is_admin",
+            
         )
         read_only_fields = ("id", "email")
 

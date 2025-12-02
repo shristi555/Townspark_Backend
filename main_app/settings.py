@@ -125,6 +125,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # custom middleware for response wrapping
+    "core.middleware.response_wrapper.ResponseWrapperMiddleware",
 ]
 
 # CORS Configuration
