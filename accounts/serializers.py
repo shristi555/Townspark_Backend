@@ -63,7 +63,7 @@ class UserSerializer(serializers.ModelSerializer):
             "profile_image",
             "is_staff",
             "is_admin",
-            
+
         )
         read_only_fields = ("id", "email")
 

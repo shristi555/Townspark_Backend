@@ -2,6 +2,12 @@ from django.db import models
 from django.conf import settings
 
 
+def issue_image_path(instance, filename):
+    """Generate upload path for issue images."""
+    ext = filename.split(".")[-1]
+    return f"issue_images/issue_{instance.issue.id}/{filename}"
+
+
 class Issue(models.Model):
     """
     Model representing an issue/complaint created by users.
@@ -95,6 +101,7 @@ class Issue(models.Model):
         choices=STATUS_CHOICES, 
         default="open"
     )
+    likes_count = models.PositiveIntegerField(default=0, help_text="Number of likes for this issue")
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -146,3 +153,29 @@ class Issue(models.Model):
         self.status = "open"
         self.resolved_by = None
         self.save()
+
+
+class IssueImage(models.Model):
+    """
+    Model for storing multiple images related to an issue.
+    """
+    issue = models.ForeignKey(
+        Issue,
+        on_delete=models.CASCADE,
+        related_name="images",
+        help_text="The issue this image belongs to"
+    )
+    image = models.ImageField(
+        upload_to=issue_image_path,
+        help_text="The uploaded image file"
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "issue_images"
+        verbose_name = "Issue Image"
+        verbose_name_plural = "Issue Images"
+        ordering = ["uploaded_at"]
+
+    def __str__(self):
+        return f"Image for Issue {self.issue.id}"

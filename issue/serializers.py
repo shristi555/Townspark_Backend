@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Issue
+from .models import Issue, IssueImage
 
 User = get_user_model()
 
@@ -35,6 +35,7 @@ class IssueSerializer(serializers.ModelSerializer):
     created_by = UserMinimalSerializer(read_only=True)
     resolved_by = UserMinimalSerializer(read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
+    images = serializers.SerializerMethodField()
 
     class Meta:
         model = Issue
@@ -45,12 +46,25 @@ class IssueSerializer(serializers.ModelSerializer):
             "category",
             "category_display",
             "status",
+            "likes_count",
+            "images",
             "created_at",
             "updated_at",
             "created_by",
             "resolved_by",
         )
-        read_only_fields = ("id", "created_at", "updated_at", "created_by", "resolved_by", "category_display")
+        read_only_fields = ("id", "created_at", "updated_at", "created_by", "resolved_by", "category_display", "images")
+
+    def get_images(self, obj):
+        """Return array of absolute URLs for issue images."""
+        request = self.context.get("request")
+        images = []
+        for issue_image in obj.images.all():
+            if request:
+                images.append(request.build_absolute_uri(issue_image.image.url))
+            else:
+                images.append(issue_image.image.url)
+        return images
 
 
 class IssueCreateSerializer(serializers.ModelSerializer):
@@ -59,6 +73,7 @@ class IssueCreateSerializer(serializers.ModelSerializer):
     
     Requires title, description, and optionally category.
     Status defaults to 'open', created_by is set from request.user.
+    Images can be optionally provided as multiple files.
     """
 
     class Meta:
@@ -130,6 +145,7 @@ class IssueListSerializer(serializers.ModelSerializer):
     created_by = UserMinimalSerializer(read_only=True)
     resolved_by = UserMinimalSerializer(read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
+    images = serializers.SerializerMethodField()
 
     class Meta:
         model = Issue
@@ -140,9 +156,22 @@ class IssueListSerializer(serializers.ModelSerializer):
             "category",
             "category_display",
             "status",
+            "likes_count",
+            "images",
             "created_at",
             "updated_at",
             "created_by",
             "resolved_by",
         )
         read_only_fields = fields
+
+    def get_images(self, obj):
+        """Return array of absolute URLs for issue images."""
+        request = self.context.get("request")
+        images = []
+        for issue_image in obj.images.all():
+            if request:
+                images.append(request.build_absolute_uri(issue_image.image.url))
+            else:
+                images.append(issue_image.image.url)
+        return images
