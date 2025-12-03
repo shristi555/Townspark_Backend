@@ -12,16 +12,11 @@ class Progress(models.Model):
     """
     Model representing a progress update for an issue.
     
-    Progress updates track the status changes and work done on issues.
-    Only staff members can create progress updates.
+    Progress updates track the work done on issues.
+    Only the reporter, admin, or staff members can create progress updates.
+    Each progress entry is linked to an issue and contains a description
+    and optional images.
     """
-
-    STATUS_CHOICES = [
-        ("open", "Open"),
-        ("in_progress", "In Progress"),
-        ("resolved", "Resolved"),
-        ("closed", "Closed"),
-    ]
 
     issue = models.ForeignKey(
         "issue.Issue",
@@ -29,46 +24,35 @@ class Progress(models.Model):
         related_name="progress_updates",
         help_text="The issue this progress update is related to"
     )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        help_text="The current status of the issue after this update"
-    )
-    notes = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Optional notes about this progress update"
+    description = models.TextField(
+        help_text="A detailed description of the progress update"
     )
     
     # Timestamps
-    updated_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     
     # Relationships
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="progress_updates",
-        help_text="The staff member who made this progress update"
+        help_text="The user who made this progress update"
     )
 
     class Meta:
         db_table = "progress"
         verbose_name = "Progress Update"
         verbose_name_plural = "Progress Updates"
-        ordering = ["-updated_at"]
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Progress for Issue #{self.issue.id} - {self.status}"
+        return f"Progress for Issue #{self.issue.id} by {self.updated_by}"
 
     def save(self, *args, **kwargs):
-        """Save progress and update the related issue's status."""
+        """Save progress and update the related issue's updated_at timestamp."""
         super().save(*args, **kwargs)
-        # Update the issue's status to match this progress update
-        if self.issue.status != self.status:
-            self.issue.status = self.status
-            if self.status == "resolved":
-                self.issue.resolved_by = self.updated_by
-            self.issue.save()
+        # Update the issue's updated_at timestamp when new progress is added
+        self.issue.save(update_fields=["updated_at"])
 
 
 class ProgressImage(models.Model):
@@ -83,7 +67,7 @@ class ProgressImage(models.Model):
         help_text="The progress update this image belongs to"
     )
     image = models.ImageField(
-        upload_to=progress_image_path,
+        upload_to="progress_images/",
         help_text="Image related to the progress update"
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)

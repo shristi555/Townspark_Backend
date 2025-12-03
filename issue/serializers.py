@@ -1,41 +1,69 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Issue, IssueImage
+from .models import Category, Issue, IssueImage
 
 User = get_user_model()
 
 
-class UserMinimalSerializer(serializers.ModelSerializer):
+class MinimalUserSerializer(serializers.ModelSerializer):
     """
-    Minimal user serializer for nested representation in Issue responses.
-    Only includes id and email as per impl.md requirements.
+    Minimal user serializer for nested representation.
+    Exposes only id, full_name, and profile_image.
+    All fields are read-only.
     """
 
     class Meta:
         model = User
-        fields = ("id", "email")
-        read_only_fields = ("id", "email")
+        fields = ("id", "full_name", "profile_image")
+        read_only_fields = ("id", "full_name", "profile_image")
 
 
-class CategorySerializer(serializers.Serializer):
+class CategorySerializer(serializers.ModelSerializer):
     """
-    Serializer for listing all available issue categories.
+    Serializer for Category model (read-only).
+    Used to represent categories in issue responses.
     """
-    value = serializers.CharField(help_text="Category value used in API requests")
-    label = serializers.CharField(help_text="Human-readable category name")
+
+    class Meta:
+        model = Category
+        fields = ("id", "name", "description")
+        read_only_fields = ("id", "name", "description")
+
+
+class CategoryCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating new categories.
+    Only admin users can create categories.
+    """
+
+    class Meta:
+        model = Category
+        fields = ("name", "description")
+
+    def validate_name(self, value):
+        """Validate that the category name is unique."""
+        if Category.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("A category with this name already exists.")
+        return value
+
+
+class IssueImageSerializer(serializers.ModelSerializer):
+    """Serializer for issue images."""
+
+    class Meta:
+        model = IssueImage
+        fields = ("id", "image", "uploaded_at")
+        read_only_fields = ("id", "uploaded_at")
 
 
 class IssueSerializer(serializers.ModelSerializer):
     """
-    Serializer for Issue model.
-    
-    Used for: Create, Retrieve, Update operations
-    Returns nested user objects for created_by and resolved_by.
+    Serializer for Issue model (read-only except status).
+    Used for representing issues in detail views.
     """
-    created_by = UserMinimalSerializer(read_only=True)
-    resolved_by = UserMinimalSerializer(read_only=True)
-    category_display = serializers.CharField(source='get_category_display', read_only=True)
-    images = serializers.SerializerMethodField()
+    category = CategorySerializer(read_only=True)
+    reported_by = MinimalUserSerializer(read_only=True)
+    images = IssueImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Issue
@@ -43,135 +71,114 @@ class IssueSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
-            "category",
-            "category_display",
+            "location",
+            "images",
             "status",
-            "likes_count",
+            "created_at",
+            "updated_at",
+            "category",
+            "reported_by",
+        )
+        read_only_fields = (
+            "id",
+            "title",
+            "description",
+            "location",
             "images",
             "created_at",
             "updated_at",
-            "created_by",
-            "resolved_by",
+            "category",
+            "reported_by",
         )
-        read_only_fields = ("id", "created_at", "updated_at", "created_by", "resolved_by", "category_display", "images")
 
-    def get_images(self, obj):
-        """Return array of absolute URLs for issue images."""
-        request = self.context.get("request")
-        images = []
-        for issue_image in obj.images.all():
-            if request:
-                images.append(request.build_absolute_uri(issue_image.image.url))
-            else:
-                images.append(issue_image.image.url)
-        return images
+
+class IssueListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing issues (lighter version).
+    Used for list views to reduce payload size.
+    """
+    category = CategorySerializer(read_only=True)
+    reported_by = MinimalUserSerializer(read_only=True)
+    image_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Issue
+        fields = (
+            "id",
+            "title",
+            "location",
+            "status",
+            "created_at",
+            "updated_at",
+            "category",
+            "reported_by",
+            "image_count",
+        )
+        read_only_fields = fields
+
+    def get_image_count(self, obj):
+        """Get the count of images for the issue."""
+        return obj.images.count()
 
 
 class IssueCreateSerializer(serializers.ModelSerializer):
     """
-    Serializer for creating a new issue.
-    
-    Requires title, description, and optionally category.
-    Status defaults to 'open', created_by is set from request.user.
-    Images can be optionally provided as multiple files.
+    Serializer for creating new issues.
+    Users provide title, description, location, category, and optional images.
     """
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+        allow_empty=True
+    )
 
     class Meta:
         model = Issue
-        fields = ("id", "title", "description", "category")
-        read_only_fields = ("id",)
+        fields = ("title", "description", "location", "category", "images")
 
     def create(self, validated_data):
-        """Create issue with the authenticated user as creator."""
+        """Create a new issue with images."""
+        images_data = validated_data.pop("images", [])
         request = self.context.get("request")
-        validated_data["created_by"] = request.user
-        return super().create(validated_data)
+        
+        # Create the issue
+        issue = Issue.objects.create(
+            reported_by=request.user,
+            **validated_data
+        )
+        
+        # Create issue images
+        for image in images_data:
+            IssueImage.objects.create(issue=issue, image=image)
+        
+        return issue
 
     def to_representation(self, instance):
-        """Return full issue representation after creation."""
+        """Use IssueSerializer for response."""
         return IssueSerializer(instance, context=self.context).data
 
 
 class IssueUpdateSerializer(serializers.ModelSerializer):
     """
-    Serializer for updating an issue.
-    
-    Allows updating: title, description, category, status
-    Only staff can update status to 'resolved' and set resolved_by.
+    Serializer for updating issue status.
+    Only admin/staff or the reporter can update the status.
     """
 
     class Meta:
         model = Issue
-        fields = ("id", "title", "description", "category", "status")
-        read_only_fields = ("id",)
+        fields = ("status",)
 
     def validate_status(self, value):
-        """Validate status changes based on user permissions."""
-        request = self.context.get("request")
-        user = request.user
-        
-        # Only staff or admin can set status to resolved
-        if value == "resolved" and not (user.is_staff or user.is_admin):
+        """Validate that the status is a valid choice."""
+        valid_statuses = [choice[0] for choice in Issue.STATUS_CHOICES]
+        if value not in valid_statuses:
             raise serializers.ValidationError(
-                "Only staff members can mark issues as resolved."
+                f"Invalid status. Valid choices are: {', '.join(valid_statuses)}"
             )
         return value
 
-    def update(self, instance, validated_data):
-        """Update issue and set resolved_by if status changed to resolved."""
-        request = self.context.get("request")
-        new_status = validated_data.get("status", instance.status)
-        
-        # If status is being changed to resolved, set resolved_by
-        if new_status == "resolved" and instance.status != "resolved":
-            validated_data["resolved_by"] = request.user
-        # If reopening, clear resolved_by
-        elif new_status == "open" and instance.status in ["resolved", "closed"]:
-            validated_data["resolved_by"] = None
-            
-        return super().update(instance, validated_data)
-
     def to_representation(self, instance):
-        """Return full issue representation after update."""
+        """Use IssueSerializer for response."""
         return IssueSerializer(instance, context=self.context).data
-
-
-class IssueListSerializer(serializers.ModelSerializer):
-    """
-    Serializer for listing issues.
-    
-    Same as IssueSerializer but optimized for list views.
-    """
-    created_by = UserMinimalSerializer(read_only=True)
-    resolved_by = UserMinimalSerializer(read_only=True)
-    category_display = serializers.CharField(source='get_category_display', read_only=True)
-    images = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Issue
-        fields = (
-            "id",
-            "title",
-            "description",
-            "category",
-            "category_display",
-            "status",
-            "likes_count",
-            "images",
-            "created_at",
-            "updated_at",
-            "created_by",
-            "resolved_by",
-        )
-        read_only_fields = fields
-
-    def get_images(self, obj):
-        """Return array of absolute URLs for issue images."""
-        request = self.context.get("request")
-        images = []
-        for issue_image in obj.images.all():
-            if request:
-                images.append(request.build_absolute_uri(issue_image.image.url))
-            else:
-                images.append(issue_image.image.url)
-        return images

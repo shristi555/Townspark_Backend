@@ -6,28 +6,17 @@ from issue.models import Issue
 User = get_user_model()
 
 
-class UserMinimalSerializer(serializers.ModelSerializer):
+class MinimalUserSerializer(serializers.ModelSerializer):
     """
     Minimal user serializer for nested representation.
-    Only includes id and email.
+    Exposes only id, full_name, and profile_image.
+    All fields are read-only.
     """
 
     class Meta:
         model = User
-        fields = ("id", "email")
-        read_only_fields = ("id", "email")
-
-
-class IssueMinimalSerializer(serializers.ModelSerializer):
-    """
-    Minimal issue serializer for nested representation.
-    Only includes id and title.
-    """
-
-    class Meta:
-        model = Issue
-        fields = ("id", "title")
-        read_only_fields = ("id", "title")
+        fields = ("id", "full_name", "profile_image")
+        read_only_fields = ("id", "full_name", "profile_image")
 
 
 class ProgressImageSerializer(serializers.ModelSerializer):
@@ -41,13 +30,10 @@ class ProgressImageSerializer(serializers.ModelSerializer):
 
 class ProgressSerializer(serializers.ModelSerializer):
     """
-    Serializer for Progress model.
-    
-    Used for: Retrieve operations
-    Returns nested user and issue objects.
+    Serializer for Progress model (read-only).
+    Used for representing progress updates in responses.
     """
-    issue = IssueMinimalSerializer(read_only=True)
-    updated_by = UserMinimalSerializer(read_only=True)
+    updated_by = MinimalUserSerializer(read_only=True)
     images = ProgressImageSerializer(many=True, read_only=True)
 
     class Meta:
@@ -55,63 +41,56 @@ class ProgressSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "issue",
-            "status",
-            "notes",
-            "updated_at",
+            "description",
+            "created_at",
             "updated_by",
             "images",
         )
-        read_only_fields = ("id", "updated_at", "updated_by", "issue")
+        read_only_fields = fields
 
 
 class ProgressCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating a new progress update.
     
-    Only staff members can create progress updates.
-    Requires issue_id, status. Notes and images are optional.
+    Only the reporter, admin, or staff members can create progress updates.
+    Requires issue (id), description. Images are optional.
     """
-    issue_id = serializers.IntegerField(write_only=True)
+    issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.all())
     images = serializers.ListField(
         child=serializers.ImageField(),
         write_only=True,
-        required=False
+        required=False,
+        allow_empty=True
     )
 
     class Meta:
         model = Progress
-        fields = ("id", "issue_id", "status", "notes", "images")
-        read_only_fields = ("id",)
-
-    def validate_issue_id(self, value):
-        """Validate that the issue exists."""
-        try:
-            Issue.objects.get(pk=value)
-        except Issue.DoesNotExist:
-            raise serializers.ValidationError("Issue not found.")
-        return value
+        fields = ("issue", "description", "images")
 
     def validate(self, attrs):
-        """Validate that the user is a staff member."""
+        """Validate that the user is allowed to add progress."""
         request = self.context.get("request")
-        if not (request.user.is_staff or request.user.is_admin):
+        issue = attrs.get("issue")
+        
+        # Check if user is admin/staff or the reporter
+        is_admin_staff = request.user.is_admin or request.user.is_staff
+        is_reporter = issue.reported_by == request.user
+        
+        if not (is_admin_staff or is_reporter):
             raise serializers.ValidationError(
-                "Only staff members can create progress updates."
+                "Only the reporter, admin, or staff can add progress updates."
             )
+        
         return attrs
 
     def create(self, validated_data):
-        """Create progress update with images."""
-        request = self.context.get("request")
-        issue_id = validated_data.pop("issue_id")
+        """Create a new progress update with images."""
         images_data = validated_data.pop("images", [])
+        request = self.context.get("request")
         
-        # Get the issue
-        issue = Issue.objects.get(pk=issue_id)
-        
-        # Create progress update
+        # Create the progress update
         progress = Progress.objects.create(
-            issue=issue,
             updated_by=request.user,
             **validated_data
         )
@@ -123,76 +102,5 @@ class ProgressCreateSerializer(serializers.ModelSerializer):
         return progress
 
     def to_representation(self, instance):
-        """Return full progress representation after creation."""
+        """Use ProgressSerializer for response."""
         return ProgressSerializer(instance, context=self.context).data
-
-
-class ProgressUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating a progress update.
-    
-    Allows updating: status, notes
-    Only staff members can update progress.
-    """
-    images = serializers.ListField(
-        child=serializers.ImageField(),
-        write_only=True,
-        required=False
-    )
-
-    class Meta:
-        model = Progress
-        fields = ("id", "status", "notes", "images")
-        read_only_fields = ("id",)
-
-    def validate(self, attrs):
-        """Validate that the user is a staff member."""
-        request = self.context.get("request")
-        if not (request.user.is_staff or request.user.is_admin):
-            raise serializers.ValidationError(
-                "Only staff members can update progress."
-            )
-        return attrs
-
-    def update(self, instance, validated_data):
-        """Update progress and add new images if provided."""
-        images_data = validated_data.pop("images", [])
-        
-        # Update progress fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        
-        # Add new images
-        for image in images_data:
-            ProgressImage.objects.create(progress=instance, image=image)
-        
-        return instance
-
-    def to_representation(self, instance):
-        """Return full progress representation after update."""
-        return ProgressSerializer(instance, context=self.context).data
-
-
-class ProgressListSerializer(serializers.ModelSerializer):
-    """
-    Serializer for listing progress updates.
-    
-    Optimized for list views with minimal nested data.
-    """
-    issue = IssueMinimalSerializer(read_only=True)
-    updated_by = UserMinimalSerializer(read_only=True)
-    images = ProgressImageSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Progress
-        fields = (
-            "id",
-            "issue",
-            "status",
-            "notes",
-            "updated_at",
-            "updated_by",
-            "images",
-        )
-        read_only_fields = fields
