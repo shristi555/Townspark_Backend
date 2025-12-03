@@ -191,10 +191,12 @@ GET /api/v1/issues/list/
 		{
 			"id": 1,
 			"title": "Test Pothole",
+			"description": "There is a large pothole on Main St.",
+			"images": [],
 			"location": "Main St. near 1st Ave.",
 			"status": "open",
-			"created_at": "2025-12-03T10:22:08Z",
-			"updated_at": "2025-12-03T10:22:08Z",
+			"created_at": "2025-12-03T10:41:11Z",
+			"updated_at": "2025-12-03T10:41:11Z",
 			"category": {
 				"id": 1,
 				"name": "Potholes",

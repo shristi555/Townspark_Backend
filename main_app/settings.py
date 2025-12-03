@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "issue",
     "progress",
     "comment",
+    "profile",
 
 
 ]

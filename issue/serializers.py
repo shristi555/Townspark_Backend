@@ -106,6 +106,8 @@ class IssueListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
+            "description",
+            "images",
             "location",
             "status",
             "created_at",
@@ -133,6 +135,7 @@ class IssueCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True
     )
+
 
     class Meta:
         model = Issue
