@@ -99,6 +99,7 @@ class IssueListSerializer(serializers.ModelSerializer):
     """
     category = CategorySerializer(read_only=True)
     reported_by = MinimalUserSerializer(read_only=True)
+    images = IssueImageSerializer(many=True, read_only=True)
     image_count = serializers.SerializerMethodField()
 
     class Meta:

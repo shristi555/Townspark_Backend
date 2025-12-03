@@ -21,6 +21,40 @@ from .permissions import (
 )
 
 
+def debug_request_data(request):
+    """Utility function to print request data in pretty JSON format for debugging.
+We only concernwith some needed datas
+1. The request data itself
+2. if there are files, the list of file names
+3. the content type of the request
+4. the method of the request
+5. the user making the request
+6. any query parameters
+7. the endpoint being accessed
+    """
+    import json
+    from pprint import pprint
+
+    data = {
+        "method": request.method,
+        "user": str(request.user),
+        "content_type": request.content_type,
+        "data": request.data,
+        "files": [f.name for f in request.FILES.values()] if request.FILES else [],
+        "query_params": request.query_params,
+        "path": request.path,
+    }
+
+    print("----- DEBUG REQUEST DATA -----")
+    pprint(data)
+    print("----- END DEBUG REQUEST DATA -----")
+
+
+
+
+
+
+
 # ============================================================================
 # Category Views
 # ============================================================================
@@ -74,7 +108,7 @@ class IssueListView(APIView):
     - category: Filter by category ID
     - search: Search in title and description
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         issues = Issue.objects.all().select_related(
@@ -113,7 +147,18 @@ class IssueCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
-        serializer = IssueCreateSerializer(data=request.data, context={"request": request})
+        debug_request_data(request)
+        
+        # Merge request.data with files from request.FILES
+        data = request.data.copy()
+        
+        # Get images from FILES - handle both 'images' and 'images[]' keys
+        images = request.FILES.getlist('images') or request.FILES.getlist('images[]')
+        if images:
+            data.setlist('images', images)
+        
+        serializer = IssueCreateSerializer(data=data, context={"request": request})
+        
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -126,7 +171,7 @@ class IssueDetailView(APIView):
     
     Requires authentication.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, issue_id):
         issue = get_object_or_404(
@@ -145,7 +190,7 @@ class UserReportedIssuesView(APIView):
     - Regular users can only view their own issues
     - Admin/Staff can view any user's issues
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, user_id):
         user = request.user
